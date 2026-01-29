@@ -20,7 +20,13 @@ const columns = [
   { name: 'description', label: 'Description', field: 'description', align: 'left' },
   { name: 'status', label: 'Status', field: 'status', align: 'center' },
   { name: 'connection', label: 'Conn', field: 'connection', align: 'left' },
-  { name: 'sql_query', label: 'SQL Query', field: 'sql_query', align: 'left', style: 'min-width: 350px;' },
+  {
+    name: 'sql_query',
+    label: 'SQL Query',
+    field: 'sql_query',
+    align: 'left',
+    style: 'min-width: 350px;',
+  },
   {
     name: 'delete',
     label: 'Remove',
