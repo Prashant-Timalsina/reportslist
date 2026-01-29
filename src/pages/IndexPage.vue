@@ -41,7 +41,17 @@
       </q-card>
     </q-dialog>
 
-    <q-table :rows="store.table1" :columns="columns" row-key="id" flat bordered>
+    <ReportTable
+      :rows="store.table1"
+      :columns="columns"
+      :allowed-types="store.ALLOWED_TYPES"
+      :allowed-intervals="store.ALLOWED_INTERVALS"
+      @add-param="addParam"
+      @remove-param="removeParam"
+      @delete="confirmDelete"
+      @update-title="handleTitleUpdate"
+    />
+    <!-- <q-table :rows="store.table1" :columns="columns" row-key="id" flat bordered>
       <template v-slot:body-cell-actions="props">
         <q-td :props="props">
           <q-btn
@@ -64,13 +74,7 @@
               dense
               autofocus
               counter
-              @keydown.enter.prevent="
-                () => {
-                  scope.set(scope.value)
-                  store.updateReportTitle(props.row.id, scope.value)
-                  isDirty = true
-                }
-              "
+              @keydown.enter="scope.set(scope.value)"
               @keydown.esc="scope.cancel()"
             />
           </q-popup-edit>
@@ -144,7 +148,7 @@
           <q-btn flat round color="negative" icon="delete" @click="confirmDelete(props.row)" />
         </q-td>
       </template>
-    </q-table>
+    </q-table> -->
     <q-btn
       :color="isDirty === true ? 'orange' : 'secondary'"
       icon="save"
@@ -165,6 +169,7 @@ import { useQuasar } from 'quasar'
 import { useReportStore } from 'src/stores/reportStore'
 import { computed, ref, watch, onUnmounted } from 'vue'
 import Papa from 'papaparse'
+import ReportTable from 'src/components/ReportTable.vue'
 
 //
 const $q = useQuasar()
@@ -173,7 +178,7 @@ const store = useReportStore()
 const isDirty = ref(false)
 
 watch(
-  [() => store.table1, () => store.reportItems],
+  [() => store.table1],
   () => {
     isDirty.value = true
   },
@@ -253,6 +258,11 @@ const submitReport = () => {
   $q.notify({ type: 'positive', message: 'New Report Created!' })
 }
 
+const handleTitleUpdate = (id, title) => {
+  store.updateReportTitle(id, title)
+  isDirty.value = true
+}
+
 const addParam = (row) => {
   $q.dialog({
     title: 'New Parameter',
@@ -295,10 +305,10 @@ const confirmDelete = (row) => {
     persistent: true,
     ok: { color: 'negative', label: 'Delete Everything' },
   }).onOk(() => {
-    store.deleteReport(row.id)
-    // deleteReport saved to disk; ensure dirty flag cleared
-    isDirty.value = false
-    $q.notify({ type: 'negative', message: 'Report and sub-items deleted.' })
+    // Stage deletion locally and mark unsaved
+    store.deleteReport(row.id, { persist: false })
+    isDirty.value = true
+    $q.notify({ type: 'negative', message: 'Report removed locally — press Save to persist.' })
   })
 }
 

@@ -1,15 +1,17 @@
 <script setup>
 import { useQuasar } from 'quasar'
 import { useReportStore } from 'src/stores/reportStore'
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import Papa from 'papaparse'
+import ReportItemsTable from 'src/components/ReportItemsTable.vue'
 
 const route = useRoute()
 const store = useReportStore()
 const $q = useQuasar()
 
 const isSaving = ref(false)
+const isDirty = ref(false)
 
 const rows = computed(() => store.getItemsforReport(route.params.id))
 
@@ -18,13 +20,39 @@ const columns = [
   { name: 'description', label: 'Description', field: 'description', align: 'left' },
   { name: 'status', label: 'Status', field: 'status', align: 'center' },
   { name: 'connection', label: 'Conn', field: 'connection', align: 'left' },
-  { name: 'sql_query', label: 'SQL Query', field: 'sql_query', align: 'left' },
-  { name: 'delete', label: 'Remove', field: 'delete', align: 'center' },
+  { name: 'sql_query', label: 'SQL Query', field: 'sql_query', align: 'left', style: 'min-width: 350px;' },
+  {
+    name: 'delete',
+    label: 'Remove',
+    field: 'delete',
+    align: 'center',
+    style: 'vertical-align: top; min-width: 250px;',
+  },
 ]
+
+watch(
+  [() => store.reportItems],
+  () => {
+    isDirty.value = true
+  },
+  { deep: true },
+)
+
+const beforeunloadHandler = (e) => {
+  if (!isDirty.value) return
+  e.preventDefault()
+  e.returnValue = ''
+}
+
+window.addEventListener('beforeunload', beforeunloadHandler)
+onUnmounted(() => window.removeEventListener('beforeunload', beforeunloadHandler))
 
 const handleSave = () => {
   isSaving.value = true
 
+  isDirty.value = false
+
+  store.saveToDisk()
   setTimeout(() => {
     isSaving.value = false
     $q.notify({
@@ -49,6 +77,8 @@ const submitItem = () => {
   const parentId = route.params.id
   store.addItem(parentId, { ...newItem.value })
 
+  isDirty.value = false
+
   newItem.value = {
     title: '',
     description: '',
@@ -70,8 +100,10 @@ const removeSubItem = (row) => {
     cancel: true,
     persistent: true,
   }).onOk(() => {
-    store.deleteItem(row.id)
-    $q.notify({ type: 'positive', message: 'This query deleted' })
+    // Stage deletion locally and mark unsaved
+    store.deleteItem(row.id, { persist: false })
+    isDirty.value = true
+    $q.notify({ type: 'positive', message: 'This query removed locally — press Save to persist.' })
   })
 }
 
@@ -100,6 +132,8 @@ const importCSV = (event) => {
           sql_query: row.sql_query || 'SELECT * FROM ...',
         })
       })
+      $q.notify({ type: 'positive', message: `Imported ${data.length} reports!` })
+      isDirty.value = false
     },
   })
 }
@@ -171,7 +205,17 @@ const importCSV = (event) => {
       </q-card>
     </q-dialog>
 
-    <q-table :rows="rows" :columns="columns" row-key="id" flat bordered>
+    <div class="table-scroll">
+      <report-items-table
+        :rows="rows"
+        :columns="columns"
+        :allowed-statuses="store.ALLOWED_STATUSES"
+        :connections="store.CONNECTIONS"
+        @delete="removeSubItem"
+      />
+    </div>
+
+    <!-- <q-table :rows="rows" :columns="columns" row-key="id" flat bordered>
       <template v-slot:body-cell-title="props">
         <q-td :props="props">
           {{ props.row.title }}
@@ -224,9 +268,7 @@ const importCSV = (event) => {
       <template v-slot:body-cell-sql_query="props">
         <q-td :props="props">
           <div class="sql-code-preview">
-            <code
-              >{{ props.value.substring(0, 30) }}{{ props.value.length > 30 ? '...' : '' }}</code
-            >
+            <code>{{ props.value }}</code>
           </div>
 
           <q-popup-edit
@@ -252,9 +294,9 @@ const importCSV = (event) => {
           <q-btn flat round dense color="red-4" icon="close" @click="removeSubItem(props.row)" />
         </q-td>
       </template>
-    </q-table>
+    </q-table> -->
     <q-btn
-      color="secondary"
+      :color="isDirty ? 'orange' : 'secondary'"
       icon="save"
       label="Save Changes"
       :loading="isSaving"
@@ -268,6 +310,12 @@ const importCSV = (event) => {
 </template>
 
 <style scoped>
+.sql-code-preview {
+  white-space: normal;
+  word-break: break-all;
+  padding: 4px 0;
+}
+
 .sql-code-preview code {
   background-color: #272c34;
   color: #cfd7e5;
@@ -275,5 +323,16 @@ const importCSV = (event) => {
   border-radius: 4px;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 0.85em;
+
+  display: inline-block;
+  max-width: 100%;
+  line-height: 1.6;
+}
+</style>
+
+<style scoped>
+.table-scroll {
+  max-height: 55vh;
+  overflow-y: auto;
 }
 </style>

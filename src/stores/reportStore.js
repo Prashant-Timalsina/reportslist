@@ -324,17 +324,17 @@ export const useReportStore = defineStore('reports', () => {
     console.log('Data Saved successfully')
   }
 
-  const deleteReport = (id) => {
+  const deleteReport = (id, { persist = true } = {}) => {
     table1.value = table1.value.filter((r) => r.id !== id)
     reportItems.value = reportItems.value.filter((item) => item.report_id !== id)
 
-    saveToDisk()
+    if (persist) saveToDisk()
   }
 
-  const deleteItem = (id) => {
+  const deleteItem = (id, { persist = true } = {}) => {
     reportItems.value = reportItems.value.filter((item) => item.id !== id)
 
-    saveToDisk()
+    if (persist) saveToDisk()
   }
 
   return {
