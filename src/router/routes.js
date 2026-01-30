@@ -9,6 +9,7 @@ const routes = [
         name: 'report-details',
         component: () => import('pages/ReportDetailsPage.vue'),
       },
+      { path: '/login', component: () => import('pages/LoginSignup.vue') },
     ],
   },
 
