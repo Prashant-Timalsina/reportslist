@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="q-px-xl q-py-md">
     <div class="row text-h4 q-mb-md">
       Main Reports
       <q-space />
@@ -56,6 +56,7 @@
       :color="isDirty === true ? 'orange' : 'secondary'"
       icon="save"
       label="Save Changes"
+      class="q-mt-md"
       :loading="isSaving"
       @click="handleSave"
       :disable="!isDirty"

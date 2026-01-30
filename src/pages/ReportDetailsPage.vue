@@ -25,14 +25,14 @@ const columns = [
     label: 'SQL Query',
     field: 'sql_query',
     align: 'left',
-    style: 'min-width: 350px;',
+    style: 'min-width: 350px; white-space:normal',
   },
   {
     name: 'delete',
     label: 'Remove',
     field: 'delete',
     align: 'center',
-    style: 'vertical-align: top; min-width: 250px;',
+    style: 'width: 80px;',
   },
 ]
 
@@ -148,10 +148,10 @@ const importCSV = (event) => {
 </script>
 
 <template>
-  <q-page class="q-pa-md">
-    <div class="row items-center q-mb-md">
-      <q-btn icon="arrow_back" flat round to="/" />
-      <div class="text-h5 q-ml-sm">Linked Reports for ID: {{ $route.params.id }}</div>
+  <q-page class="q-px-xl q-py-md">
+    <q-btn icon="arrow_back" flat color="primary" round to="/" />
+    <div class="row items-center q-my-md">
+      <q-card class="text-h5 q-px-sm q-py-xs val-part">Linked Reports</q-card>
       <q-space />
       <div class="row items-center q-gutter-sm">
         <input ref="csvInput" type="file" accept=".csv" class="hidden" @change="importCSV" />
@@ -225,6 +225,7 @@ const importCSV = (event) => {
       :color="isDirty ? 'orange' : 'secondary'"
       icon="save"
       label="Save Changes"
+      class="q-mt-md"
       :loading="isSaving"
       @click="handleSave"
       :disable="!isDirty"
@@ -255,11 +256,70 @@ const importCSV = (event) => {
   max-width: 100%;
   line-height: 1.6;
 }
-</style>
 
-<style scoped>
+/* HEADER CARD – subtle only */
+.val-part {
+  background: white;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: 600;
+
+  cursor: default;
+  user-select: none;
+}
+/* PAGE */
+.q-page {
+  background: #fafafa;
+}
+/* TABLE CONTAINER */
 .table-scroll {
   max-height: 55vh;
   overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+}
+/* TABLE HEADER – keep Quasar feel */
+.q-table thead tr th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f5f5f5;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #555;
+}
+
+/* CELLS */
+.q-td {
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+/* ROW HOVER – subtle */
+.q-table tbody tr:hover {
+  background: #f9f9f9;
+}
+/* BUTTONS – don’t overpower */
+.q-btn {
+  border-radius: 6px;
 }
 </style>
+
+<!-- <style scoped>
+/* SQL PREVIEW – lighter */
+.sql-code-preview {
+  background: #f4f6f8;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 0.8em;
+}
+
+.sql-code-preview code {
+  background: transparent;
+  color: #333;
+  font-family: monospace;
+}
+
+/* NON-INTERACTIVE LABELS */
+</style> -->
