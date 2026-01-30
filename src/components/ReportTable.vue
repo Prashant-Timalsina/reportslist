@@ -15,6 +15,12 @@
       </q-td>
     </template>
 
+    <template #body-cell-id="props">
+      <q-td :props="props" class="shell-part">
+        {{ props.value }}
+      </q-td>
+    </template>
+
     <!-- TITLE -->
     <template #body-cell-title="props">
       <q-td :props="props">
@@ -40,8 +46,8 @@
 
     <!-- SLUG -->
     <template #body-cell-slug="props">
-      <q-td :props="props">
-        <q-chip dense size="sm" outline color="grey-7">
+      <q-td :props="props" class="shell-part">
+        <q-chip dense size="sm" outline color="grey-7" class="val-part">
           {{ props.row.slug }}
         </q-chip>
       </q-td>
@@ -68,7 +74,7 @@
     <!-- TYPE -->
     <template #body-cell-type="props">
       <q-td :props="props">
-        <q-badge :color="props.value === 'real' ? 'green' : 'orange'">
+        <q-badge :color="props.value === 'real' ? 'green' : 'orange'" class="cursor-pointer">
           {{ props.value }}
         </q-badge>
 
@@ -80,7 +86,7 @@
 
     <!-- INTERVAL -->
     <template #body-cell-interval="props">
-      <q-td :props="props">
+      <q-td :props="props" class="cursor-pointer">
         {{ props.value }}
         <q-popup-edit v-model="props.row.interval" buttons>
           <q-select v-model="props.row.interval" :options="allowedIntervals" />
@@ -156,5 +162,11 @@ defineEmits(['add-param', 'remove-param', 'delete', 'update-title'])
   padding: 2px 4px;
   border-radius: 4px;
   font-size: 0.85em;
+}
+
+.shell-part,
+.val-part {
+  cursor: default !important;
+  user-select: none;
 }
 </style>

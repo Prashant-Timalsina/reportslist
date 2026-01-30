@@ -26,6 +26,7 @@
       <q-td :props="props">
         <q-chip
           :color="props.value === 'active' ? 'positive' : 'grey'"
+          class="cursor-pointer"
           text-color="white"
           size="sm"
         >
@@ -40,7 +41,7 @@
     <!-- CONNECTION -->
     <template #body-cell-connection="props">
       <q-td :props="props">
-        <q-badge outline color="cyan">{{ props.value }}</q-badge>
+        <q-badge outline color="cyan" class="cursor-pointer">{{ props.value }}</q-badge>
         <q-popup-edit v-model="props.row.connection" v-slot="scope" buttons>
           <q-select
             v-model="scope.value"
