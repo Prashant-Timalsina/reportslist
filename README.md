@@ -1,6 +1,11 @@
 # report (report)
 
 report
+## Move to the frontend
+
+```bash
+cd frontend
+```
 
 ## Install the dependencies
 
@@ -41,3 +46,12 @@ quasar build
 ### Customize the configuration
 
 See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-js).
+
+
+## Backend
+
+```bash
+cd backend
+
+uvicorn main:app --reload
+```
