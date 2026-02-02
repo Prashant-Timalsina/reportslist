@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend:/code
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=development
+    command: uvicorn app.server:app --host 0.0.0.0 --port 8000 --reload
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "9000:9000"
+    stdin_open: true
+    tty: true
+    command: quasar dev

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
+from config.validation import UserRole
 from typing import Optional
 
 from config.validation import UserRole
@@ -9,7 +10,7 @@ class UserBase(BaseModel):
 
 # Signup
 class UserCreate(UserBase):
-    pass
+    role : UserRole
 
 # Login
 class UserLogin(UserBase):
