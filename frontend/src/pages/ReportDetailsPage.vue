@@ -1,7 +1,7 @@
 <script setup>
 import { useQuasar } from 'quasar'
 import { useReportStore } from 'src/stores/reportStore'
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import Papa from 'papaparse'
 import ReportItemsTable from 'src/components/ReportItemsTable.vue'
@@ -10,8 +10,13 @@ const route = useRoute()
 const store = useReportStore()
 const $q = useQuasar()
 
-const isSaving = ref(false)
-const isDirty = ref(false)
+onMounted(async () => {
+  try {
+    await store.fetchColumnsForReport(route.params.id)
+  } catch (err) {
+    console.error('Error fetching columns:', err)
+  }
+})
 
 const rows = computed(() => store.getItemsforReport(route.params.id))
 
@@ -35,40 +40,6 @@ const columns = [
     style: 'width: 80px;',
   },
 ]
-
-watch(
-  [() => store.reportItems],
-  () => {
-    isDirty.value = true
-  },
-  { deep: true },
-)
-
-const beforeunloadHandler = (e) => {
-  if (!isDirty.value) return
-  e.preventDefault()
-  e.returnValue = ''
-}
-
-window.addEventListener('beforeunload', beforeunloadHandler)
-onUnmounted(() => window.removeEventListener('beforeunload', beforeunloadHandler))
-
-const handleSave = () => {
-  isSaving.value = true
-
-  isDirty.value = false
-
-  store.saveToDisk()
-  setTimeout(() => {
-    isSaving.value = false
-    $q.notify({
-      type: 'positive',
-      message: 'Changes saved successfully to local storage',
-      position: 'top',
-      timeout: 2000,
-    })
-  }, 1000)
-}
 const showAddItemDialog = ref(false)
 
 const newItem = ref({
@@ -79,37 +50,99 @@ const newItem = ref({
   sql_query: 'SELECT * FROM ...',
 })
 
-const submitItem = () => {
-  const parentId = route.params.id
-  store.addItem(parentId, { ...newItem.value })
+// Edit dialog for columns
+const editingColumnId = ref(null)
+const showEditItemDialog = ref(false)
+const editItem = ref({
+  title: '',
+  description: '',
+  status: 'active',
+  connection: 'PostgreSQL_Main',
+  sql_query: 'SELECT * FROM ...',
+})
 
-  isDirty.value = false
-
-  newItem.value = {
-    title: '',
-    description: '',
-    status: 'active',
-    connection: 'PostgreSQL_Main',
-    sql_query: 'SELECT * FROM ...',
+const openEditItem = (row) => {
+  editingColumnId.value = row.id
+  editItem.value = {
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    connection: row.connection,
+    sql_query: row.sql_query,
   }
-  showAddItemDialog.value = false
-
-  store.saveToDisk()
-
-  $q.notify({ type: 'positive', message: 'New Item Created!' })
+  showEditItemDialog.value = true
 }
 
-const removeSubItem = (row) => {
+const submitEditItem = async () => {
+  if (!editItem.value.title || !editItem.value.status || !editItem.value.connection) {
+    $q.notify({ type: 'warning', message: 'Please fill in all required fields' })
+    return
+  }
+
+  try {
+    const reportId = route.params.id
+    await store.updateColumn(reportId, editingColumnId.value, {
+      title: editItem.value.title,
+      description: editItem.value.description,
+      status: editItem.value.status,
+      connection: editItem.value.connection,
+      sql_query: editItem.value.sql_query,
+    })
+
+    showEditItemDialog.value = false
+    editingColumnId.value = null
+
+    $q.notify({ type: 'positive', message: 'Column Updated!' })
+  } catch (err) {
+    $q.notify({ type: 'negative', message: 'Error updating column: ' + (err.response?.data?.detail || err.message) })
+  }
+}
+
+const cancelEditItem = () => {
+  showEditItemDialog.value = false
+  editingColumnId.value = null
+  editItem.value = { title: '', description: '', status: 'active', connection: 'PostgreSQL_Main', sql_query: 'SELECT * FROM ...' }
+}
+
+const submitItem = async () => {
+  if (!newItem.value.title || !newItem.value.status || !newItem.value.connection) {
+    $q.notify({ type: 'warning', message: 'Please fill in all required fields' })
+    return
+  }
+
+  try {
+    const parentId = route.params.id
+    await store.addItem(parentId, { ...newItem.value })
+
+    newItem.value = {
+      title: '',
+      description: '',
+      status: 'active',
+      connection: 'PostgreSQL_Main',
+      sql_query: 'SELECT * FROM ...',
+    }
+    showAddItemDialog.value = false
+
+    $q.notify({ type: 'positive', message: 'New Item Created!' })
+  } catch (err) {
+    $q.notify({ type: 'negative', message: 'Error creating column: ' + (err.response?.data?.detail || err.message) })
+  }
+}
+
+const removeSubItem = async (row) => {
   $q.dialog({
     title: 'Delete Item',
     message: 'Remove this query from the report?',
     cancel: true,
     persistent: true,
-  }).onOk(() => {
-    // Stage deletion locally and mark unsaved
-    store.deleteItem(row.id, { persist: false })
-    isDirty.value = true
-    $q.notify({ type: 'positive', message: 'This query removed locally — press Save to persist.' })
+  }).onOk(async () => {
+    try {
+      const reportId = route.params.id
+      await store.deleteColumn(reportId, row.id)
+      $q.notify({ type: 'positive', message: 'Column deleted successfully' })
+    } catch (err) {
+      $q.notify({ type: 'negative', message: 'Error deleting column: ' + (err.response?.data?.detail || err.message) })
+    }
   })
 }
 
@@ -126,20 +159,24 @@ const importCSV = (event) => {
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
-    complete: (results) => {
+    complete: async (results) => {
       const data = results.data
+      const reportId = route.params.id
 
-      data.forEach((row) => {
-        store.addItem({
-          title: row.title || '',
-          description: row.description || '',
-          status: row.status || 'active',
-          connection: row.connection || 'PostgreSQL_Main',
-          sql_query: row.sql_query || 'SELECT * FROM ...',
-        })
-      })
-      $q.notify({ type: 'positive', message: `Imported ${data.length} reports!` })
-      isDirty.value = false
+      for (const row of data) {
+        try {
+          await store.addItem(reportId, {
+            title: row.title || '',
+            description: row.description || '',
+            status: row.status || 'active',
+            connection: row.connection || 'PostgreSQL_Main',
+            sql_query: row.sql_query || 'SELECT * FROM ...',
+          })
+        } catch (err) {
+          console.error('Error importing row:', err)
+        }
+      }
+      $q.notify({ type: 'positive', message: `Imported ${data.length} items!` })
     },
   })
 }
@@ -184,7 +221,7 @@ const importCSV = (event) => {
           <q-input v-model="newItem.description" label="Description" filled dense type="textarea" />
           <q-select
             v-model="newItem.status"
-            :options="['active', 'pending', 'inactive']"
+            :options="store.ALLOWED_STATUSES"
             label="Status"
             filled
             dense
@@ -211,6 +248,41 @@ const importCSV = (event) => {
       </q-card>
     </q-dialog>
 
+    <q-dialog v-model="showEditItemDialog">
+      <q-card style="min-width: 350px">
+        <q-card-section><div class="text-h6">Edit Report Item</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input v-model="editItem.title" label="Title" filled dense />
+          <q-input v-model="editItem.description" label="Description" filled dense type="textarea" />
+          <q-select
+            v-model="editItem.status"
+            :options="store.ALLOWED_STATUSES"
+            label="Status"
+            filled
+            dense
+          />
+          <q-select
+            v-model="editItem.connection"
+            :options="store.CONNECTIONS"
+            label="Connection"
+            filled
+            dense
+          />
+          <q-input
+            v-model="editItem.sql_query"
+            label="SQL_Query"
+            type="textarea"
+            filled
+            placeholder="SELECT * FROM table ..."
+          />
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="cancelEditItem" />
+          <q-btn color="green" label="Save" @click="submitEditItem" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <div class="table-scroll">
       <report-items-table
         :rows="rows"
@@ -218,22 +290,9 @@ const importCSV = (event) => {
         :allowed-statuses="store.ALLOWED_STATUSES"
         :connections="store.CONNECTIONS"
         @delete="removeSubItem"
+        @edit="openEditItem"
       />
     </div>
-
-    <q-btn
-      :color="isDirty ? 'orange' : 'secondary'"
-      icon="save"
-      label="Save Changes"
-      class="q-mt-md"
-      :loading="isSaving"
-      @click="handleSave"
-      :disable="!isDirty"
-    >
-      <template>
-        <q-spinner-facebook />
-      </template>
-    </q-btn>
   </q-page>
 </template>
 

@@ -33,5 +33,13 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     history: createHistory(process.env.VUE_ROUTER_BASE),
   })
 
+  Router.beforeEach((to) => {
+    const token = localStorage.getItem('token')
+    if (!token && to.path !== '/login') {
+      return { path: '/login' }
+    }
+    return true
+  })
+
   return Router
 })

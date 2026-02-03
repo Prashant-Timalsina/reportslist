@@ -25,22 +25,6 @@
     <template #body-cell-title="props">
       <q-td :props="props">
         {{ props.row.title }}
-
-        <q-popup-edit v-model="props.row.title" v-slot="scope" auto-save>
-          <q-input
-            v-model="scope.value"
-            dense
-            autofocus
-            counter
-            @keydown.enter.prevent="
-              () => {
-                scope.set(scope.value)
-                $emit('update-title', props.row.id, scope.value)
-              }
-            "
-            @keydown.esc="scope.cancel()"
-          />
-        </q-popup-edit>
       </q-td>
     </template>
 
@@ -58,29 +42,15 @@
       <q-td :props="props">
         <div class="td-description">{{ props.row.description }}</div>
         <q-tooltip>{{ props.row.description }}</q-tooltip>
-
-        <q-popup-edit v-model="props.row.description" buttons label-set="Save">
-          <q-input
-            type="textarea"
-            v-model="props.row.description"
-            dense
-            autofocus
-            label="Edit Description"
-          />
-        </q-popup-edit>
       </q-td>
     </template>
 
     <!-- TYPE -->
     <template #body-cell-type="props">
       <q-td :props="props">
-        <q-badge :color="props.value === 'real' ? 'green' : 'orange'" class="cursor-pointer">
+        <q-badge :color="props.value === 'realtime' ? 'green' : 'orange'" class="cursor-pointer">
           {{ props.value }}
         </q-badge>
-
-        <q-popup-edit v-model="props.row.type" buttons>
-          <q-select v-model="props.row.type" :options="allowedTypes" dense autofocus />
-        </q-popup-edit>
       </q-td>
     </template>
 
@@ -88,9 +58,15 @@
     <template #body-cell-interval="props">
       <q-td :props="props" class="cursor-pointer">
         {{ props.value }}
-        <q-popup-edit v-model="props.row.interval" buttons>
-          <q-select v-model="props.row.interval" :options="allowedIntervals" />
-        </q-popup-edit>
+      </q-td>
+    </template>
+
+    <!-- STATUS -->
+    <template #body-cell-status="props">
+      <q-td :props="props">
+        <q-badge :color="props.value === 'active' ? 'green' : 'grey'" class="cursor-pointer">
+          {{ props.value }}
+        </q-badge>
       </q-td>
     </template>
 
@@ -101,35 +77,25 @@
           <q-chip
             v-for="(value, key) in props.row.parameters"
             :key="key"
-            removable
             color="teal-1"
             text-color="teal-9"
             size="sm"
-            @remove="$emit('remove-param', props.row, key)"
           >
             <strong>{{ key }}:</strong>&nbsp;{{ value }}
-
-            <q-popup-edit v-model="props.row.parameters[key]" buttons>
-              <q-input v-model="props.row.parameters[key]" dense autofocus />
-            </q-popup-edit>
           </q-chip>
-
-          <q-btn
-            icon="add"
-            round
-            size="xs"
-            color="teal"
-            flat
-            @click="$emit('add-param', props.row)"
-          />
         </div>
       </q-td>
     </template>
 
     <!-- DELETE -->
-    <template #body-cell-delete="props">
+    <template #body-cell-actions-col="props">
       <q-td :props="props">
-        <q-btn flat round color="negative" icon="delete" @click="$emit('delete', props.row)" />
+        <q-btn flat round color="primary" icon="edit" @click="$emit('edit', props.row)">
+          <q-tooltip>Edit Report</q-tooltip>
+        </q-btn>
+        <q-btn flat round color="negative" icon="delete" @click="$emit('delete', props.row)">
+          <q-tooltip>Delete Report</q-tooltip>
+        </q-btn>
       </q-td>
     </template>
   </BaseTable>
@@ -145,7 +111,7 @@ defineProps({
   allowedIntervals: { type: Array, required: true },
 })
 
-defineEmits(['add-param', 'remove-param', 'delete', 'update-title'])
+defineEmits(['delete', 'edit'])
 </script>
 
 <style scoped>

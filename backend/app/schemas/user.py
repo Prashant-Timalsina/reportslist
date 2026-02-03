@@ -13,8 +13,10 @@ class UserCreate(UserBase):
     role : UserRole
 
 # Login
-class UserLogin(UserBase):
-    pass 
+class UserLogin(BaseModel):
+    # Accept plain string for login so users can provide username or email
+    email: str
+    password: str
 
 class UserResponse(BaseModel):
     id : int 

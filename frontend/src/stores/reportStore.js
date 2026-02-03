@@ -1,10 +1,13 @@
 import { defineStore } from 'pinia'
 
 import { ref } from 'vue'
+import { api } from 'src/boot/axios'
 
 export const useReportStore = defineStore('reports', () => {
-  const ALLOWED_TYPES = ref(['real', 'cached'])
-  const ALLOWED_INTERVALS = ref(['hourly', 'daily', 'weekly', 'monthly'])
+  // Backend enums: must match FastAPI validation
+  const ALLOWED_TYPES = ref(['realtime', 'cached'])
+  const ALLOWED_INTERVALS = ref(['hourly', 'daily', 'monthly', 'annually'])
+  const ALLOWED_STATUSES = ref(['active', 'inactive'])
 
   const CONNECTIONS = ref([
     'PostgreSQL_Main',
@@ -14,7 +17,6 @@ export const useReportStore = defineStore('reports', () => {
     'Firebird_Legacy',
     'Snowflake_WH',
   ])
-  const ALLOWED_STATUSES = ref(['active', 'pending', 'inactive'])
 
   const validateReport = (report) => {
     const isTypeValid = ALLOWED_TYPES.value.includes(report.type)
@@ -27,226 +29,10 @@ export const useReportStore = defineStore('reports', () => {
   }
 
   // TABLE 1: Main Reports (The Parents)
-  const table1 = ref([
-    {
-      id: 1,
-      title: 'Financial Performance',
-      description: 'Monthly revenue and expense tracking across all departments.',
-      slug: 'financial-performance',
-      type: 'real', // Must be 'real' or 'cached'
-      interval: 'monthly', // Allowed: hourly, daily, weekly, monthly
-      parameters: { currency: 'USD', region: 'Global' },
-    },
-    {
-      id: 2,
-      title: 'Daily User Traffic',
-      description: 'Real-time monitoring of active users on the platform.',
-      slug: 'daily-user-traffic',
-      type: 'real',
-      interval: 'daily',
-      parameters: { device: 'all' },
-    },
-    {
-      id: 3,
-      title: 'System Health Log',
-      description: 'Weekly summary of server uptime and error rates.',
-      slug: 'system-health-log',
-      type: 'cached',
-      interval: 'weekly',
-      parameters: { serverId: 'SF-01' },
-    },
-  ])
+  const table1 = ref([])
 
   // TABLE 2: Linked Detailed Reports
-  const reportItems = ref([
-    // LINKED TO REPORT 1 (Financial Performance) - 7 items
-    {
-      id: 101,
-      report_id: 1,
-      title: 'Revenue Q1',
-      description: 'January to March stats',
-      status: 'active',
-      sql_query: 'SELECT * FROM revenue WHERE q=1',
-      connection: 'PostgreSQL_Main',
-    },
-    {
-      id: 102,
-      report_id: 1,
-      title: 'Revenue Q2',
-      description: 'April to June stats',
-      status: 'active',
-      sql_query: 'SELECT * FROM revenue WHERE q=2',
-      connection: 'PostgreSQL_Main',
-    },
-    {
-      id: 103,
-      report_id: 1,
-      title: 'Expense Tracker',
-      description: 'Department costs',
-      status: 'active',
-      sql_query: 'SELECT * FROM expenses',
-      connection: 'MySQL_Sales',
-    },
-    {
-      id: 104,
-      report_id: 1,
-      title: 'Tax Summary',
-      description: 'Annual tax projections',
-      status: 'pending',
-      sql_query: 'SELECT * FROM tax',
-      connection: 'Oracle_ERP',
-    },
-    {
-      id: 105,
-      report_id: 1,
-      title: 'Payroll Data',
-      description: 'Monthly salary disbursements',
-      status: 'active',
-      sql_query: 'SELECT * FROM payroll',
-      connection: 'PostgreSQL_Main',
-    },
-    {
-      id: 106,
-      report_id: 1,
-      title: 'Audit Log',
-      description: 'Financial audit trail',
-      status: 'active',
-      sql_query: 'SELECT * FROM audit',
-      connection: 'PostgreSQL_Main',
-    },
-    {
-      id: 107,
-      report_id: 1,
-      title: 'Investor Deck Data',
-      description: 'Data for stakeholders',
-      status: 'inactive',
-      sql_query: 'SELECT * FROM investor_stats',
-      connection: 'BigQuery_Analytics',
-    },
-
-    // LINKED TO REPORT 2 (Daily User Traffic) - 7 items
-    {
-      id: 201,
-      report_id: 2,
-      title: 'Mobile Users',
-      description: 'Android & iOS traffic',
-      status: 'active',
-      sql_query: 'SELECT * FROM traffic WHERE device="mobile"',
-      connection: 'MongoDB_Logs',
-    },
-    {
-      id: 202,
-      report_id: 2,
-      title: 'Desktop Users',
-      description: 'Web browser traffic',
-      status: 'active',
-      sql_query: 'SELECT * FROM traffic WHERE device="desktop"',
-      connection: 'MongoDB_Logs',
-    },
-    {
-      id: 203,
-      report_id: 2,
-      title: 'Country Breakdown',
-      description: 'Users by geography',
-      status: 'active',
-      sql_query: 'SELECT count(*) FROM users GROUP BY country',
-      connection: 'BigQuery_Analytics',
-    },
-    {
-      id: 204,
-      report_id: 2,
-      title: 'Bounce Rate',
-      description: 'Percentage of quick exits',
-      status: 'active',
-      sql_query: 'SELECT bounce FROM analytics',
-      connection: 'Snowflake_WH',
-    },
-    {
-      id: 205,
-      report_id: 2,
-      title: 'New Signups',
-      description: 'User registrations today',
-      status: 'active',
-      sql_query: 'SELECT * FROM users WHERE created_at = TODAY',
-      connection: 'PostgreSQL_Main',
-    },
-    {
-      id: 206,
-      report_id: 2,
-      title: 'Session Duration',
-      description: 'Average time on site',
-      status: 'active',
-      sql_query: 'SELECT avg_time FROM sessions',
-      connection: 'Redis_Cache',
-    },
-    {
-      id: 207,
-      report_id: 2,
-      title: 'Referral Sources',
-      description: 'Where users come from',
-      status: 'active',
-      sql_query: 'SELECT source FROM traffic',
-      connection: 'MongoDB_Logs',
-    },
-
-    // LINKED TO REPORT 3 (System Health Log) - 6 items
-    {
-      id: 301,
-      report_id: 3,
-      title: 'CPU Usage',
-      description: 'Server processor load',
-      status: 'active',
-      sql_query: 'SELECT cpu FROM metrics',
-      connection: 'SQLite_Local',
-    },
-    {
-      id: 302,
-      report_id: 3,
-      title: 'Memory Leak Check',
-      description: 'RAM consumption patterns',
-      status: 'active',
-      sql_query: 'SELECT ram FROM metrics',
-      connection: 'SQLite_Local',
-    },
-    {
-      id: 303,
-      report_id: 3,
-      title: 'Error 500 Frequency',
-      description: 'Server crash log',
-      status: 'active',
-      sql_query: 'SELECT * FROM logs WHERE status=500',
-      connection: 'Firebird_Legacy',
-    },
-    {
-      id: 304,
-      report_id: 3,
-      title: 'Database Latency',
-      description: 'Query response times',
-      status: 'active',
-      sql_query: 'SELECT latency FROM db_monitor',
-      connection: 'MariaDB_Backup',
-    },
-    {
-      id: 305,
-      report_id: 3,
-      title: 'API Uptime',
-      description: 'Endpoint availability',
-      status: 'active',
-      sql_query: 'SELECT uptime FROM api',
-      connection: 'SQLite_Local',
-    },
-    {
-      id: 306,
-      report_id: 3,
-      title: 'Storage Capacity',
-      description: 'Disk space remaining',
-      status: 'active',
-      sql_query: 'SELECT space FROM disk',
-      connection: 'SQLite_Local',
-    },
-  ])
-
-  // We will fill these with seeds on Day 2 & 4
+  const reportItems = ref([])
 
   const getItemsforReport = (reportId) => {
     return reportItems.value.filter((item) => item.report_id === parseInt(reportId))
@@ -276,64 +62,355 @@ export const useReportStore = defineStore('reports', () => {
     report.slug = slugify(title)
   }
 
-  const nextReportId = ref(4)
-  const nextItemId = ref(307)
+  // Data now sourced from API via CRUD actions below
 
   const addReport = (newReport) => {
-    const id = nextReportId.value++
-    table1.value.push({
-      id,
-      ...newReport,
-      slug: newReport.slug || '',
-      parameters: newReport.parameters || {},
-    })
-
-    saveToDisk()
+    // Create report via API and add returned object to store
+    return api
+      .post('/reports', newReport)
+      .then((res) => {
+        const r = res.data
+        // Map backend response to frontend shape
+        table1.value.unshift({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          slug: r.slug,
+          type: r.type,
+          interval: r.interval,
+          status: r.status,
+          parameters: r.params || {},
+        })
+        return r
+      })
+      .catch((err) => {
+        console.error('Create report error', err)
+        throw err
+      })
   }
 
   const addItem = (reportId, newItem) => {
-    const id = nextItemId.value++
-    reportItems.value.push({
-      id,
-      report_id: parseInt(reportId),
-      ...newItem,
-    })
+    // Create report column via API and add returned object to store
+    const payload = {
+      name: newItem.name || newItem.title,
+      description: newItem.description || null,
+      status: newItem.status,
+      query: newItem.sql_query || newItem.query || null,
+      connection_id: newItem.connection || newItem.connection_id,
+    }
 
-    saveToDisk()
+    return api
+      .post(`/reports/${reportId}/columns`, payload)
+      .then((res) => {
+        const c = res.data
+        reportItems.value.unshift({
+          id: c.id,
+          report_id: parseInt(reportId),
+          title: c.name,
+          name: c.name,
+          description: c.description,
+          status: c.status,
+          sql_query: c.query,
+          query: c.query,
+          connection: c.connection_id,
+          connection_id: c.connection_id,
+        })
+        return c
+      })
+      .catch((err) => {
+        console.error('Create report column error', err)
+        throw err
+      })
   }
 
-  const savedT1 = localStorage.getItem('table1')
-  if (savedT1) table1.value = JSON.parse(savedT1)
+  // ============================================
+  // TODO: CRUD - REPORTS
+  // ============================================
 
-  const savedT2 = localStorage.getItem('table2')
-  if (savedT2) reportItems.value = JSON.parse(savedT2)
+  // TODO: CREATE REPORT (POST /reports)
+  // Payload: { title, description?, type, interval, status, params? }
+  // Constraints:
+  //   - title: 3-255 chars, required
+  //   - description: max 1000 chars, optional
+  //   - type: enum ['realtime', 'cached'], required
+  //   - interval: enum ['hourly', 'daily', 'monthly', 'annually'], required
+  //   - status: enum ['active', 'inactive'], required
+  //   - params: dict/object, optional
+  // Response: { id, title, description, type, interval, status, slug, params, ... }
+  // Store updates: add to table1 after success, update nextReportId
+  // Error cases: validation error (400), unauthorized (401)
 
-  // watch(
-  //   [table1, reportItems],
-  //   () => {
-  //     localStorage.setItem('table1', JSON.stringify(table1.value))
-  //     localStorage.setItem('table2', JSON.stringify(reportItems.value))
-  //   },
-  //   { deep: true },
-  // )
+  // TODO: READ ALL REPORTS (GET /reports)
+  // Params: filters?, pagination?
+  // Response: array of report objects
+  // Store updates: replace table1 with server data
+  // Error cases: unauthorized (401), server error (500)
 
-  const saveToDisk = () => {
-    localStorage.setItem('table1', JSON.stringify(table1.value))
-    localStorage.setItem('table2', JSON.stringify(reportItems.value))
-    console.log('Data Saved successfully')
+  // TODO: READ REPORT BY ID (GET /reports/{id})
+  // Response: single report object with all fields
+  // Store updates: optional (use in getReportById or fetch on demand)
+  // Error cases: not found (404), unauthorized (401)
+
+  // TODO: UPDATE REPORT (PUT /reports/{id})
+  // Payload: { title?, description?, type?, interval?, status?, params? }
+  // Note: all fields optional, slug is read-only (auto-generated)
+  // Store updates: merge changes into table1 entry by id
+  // Error cases: not found (404), validation (400), unauthorized (401)
+
+  // TODO: DELETE REPORT (DELETE /reports/{id})
+  // Side effect: must cascade-delete all associated report columns (reportItems)
+  // Store updates: remove from table1 and reportItems by report_id
+  // Error cases: not found (404), unauthorized (401)
+
+  // ============================================
+  // TODO: CRUD - REPORT COLUMNS
+  // ============================================
+
+  // TODO: CREATE COLUMN (POST /reports/{id}/columns)
+  // Payload: { name, description?, status, query?, connection_id }
+  // Constraints:
+  //   - name: 3-255 chars, required
+  //   - description: max 1000 chars, optional
+  //   - status: enum ['active', 'inactive'], required
+  //   - query: optional string (SQL)
+  //   - connection_id: required string
+  // Response: { id, name, description, status, query, connection_id }
+  // Store updates: add to reportItems with new id, link to report_id
+  // Error cases: report not found (404), validation (400), unauthorized (401)
+
+  // TODO: READ COLUMNS FOR REPORT (GET /reports/{id}/columns)
+  // Response: array of column objects for given report_id
+  // Store updates: replace reportItems entries for that report_id
+  // Error cases: report not found (404), unauthorized (401)
+
+  // TODO: READ COLUMN BY ID (GET /reports/{id}/columns/{column_id})
+  // Response: single column object
+  // Store updates: optional
+  // Error cases: not found (404), unauthorized (401)
+
+  // TODO: UPDATE COLUMN (PUT /reports/{id}/columns/{column_id})
+  // Payload: { name?, description?, status?, query?, connection_id? }
+  // Note: all fields optional, id and report_id are read-only
+  // Store updates: merge changes into reportItems entry by id
+  // Error cases: not found (404), validation (400), unauthorized (401)
+
+  // TODO: DELETE COLUMN (DELETE /reports/{id}/columns/{column_id})
+  // Note: verify column_id belongs to report_id before delete
+  // Store updates: remove from reportItems by id
+  // Error cases: not found (404), unauthorized (401)
+
+  // ============================================
+  // READ - REPORTS
+  // ============================================
+  const fetchAllReports = () => {
+    return api
+      .get('/reports')
+      .then((res) => {
+        const reports = res.data || []
+        table1.value = reports.map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          slug: r.slug,
+          type: r.type,
+          interval: r.interval,
+          status: r.status,
+          parameters: r.params || {},
+        }))
+        return reports
+      })
+      .catch((err) => {
+        console.error('Fetch reports error', err)
+        throw err
+      })
   }
 
-  const deleteReport = (id, { persist = true } = {}) => {
-    table1.value = table1.value.filter((r) => r.id !== id)
-    reportItems.value = reportItems.value.filter((item) => item.report_id !== id)
-
-    if (persist) saveToDisk()
+  const fetchReportById = (reportId) => {
+    return api
+      .get(`/reports/${reportId}`)
+      .then((res) => {
+        const r = res.data
+        return {
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          slug: r.slug,
+          type: r.type,
+          interval: r.interval,
+          status: r.status,
+          parameters: r.params || {},
+        }
+      })
+      .catch((err) => {
+        console.error(`Fetch report ${reportId} error`, err)
+        throw err
+      })
   }
 
-  const deleteItem = (id, { persist = true } = {}) => {
+  // ============================================
+  // UPDATE - REPORTS
+  // ============================================
+  const updateReport = (reportId, updates) => {
+    return api
+      .put(`/reports/${reportId}`, updates)
+      .then((res) => {
+        const r = res.data
+        const idx = table1.value.findIndex((report) => report.id === reportId)
+        if (idx >= 0) {
+          table1.value[idx] = {
+            id: r.id,
+            title: r.title,
+            description: r.description,
+            slug: r.slug,
+            type: r.type,
+            interval: r.interval,
+            status: r.status,
+            parameters: r.params || {},
+          }
+        }
+        return r
+      })
+      .catch((err) => {
+        console.error(`Update report ${reportId} error`, err)
+        throw err
+      })
+  }
+
+  // ============================================
+  // DELETE - REPORTS
+  // ============================================
+  const deleteReport = (id) => {
+    return api
+      .delete(`/reports/${id}`)
+      .then(() => {
+        table1.value = table1.value.filter((r) => r.id !== id)
+        reportItems.value = reportItems.value.filter((item) => item.report_id !== id)
+        return { message: 'Report deleted successfully' }
+      })
+      .catch((err) => {
+        console.error(`Delete report ${id} error`, err)
+        throw err
+      })
+  }
+
+  // ============================================
+  // READ - REPORT COLUMNS
+  // ============================================
+  const fetchColumnsForReport = (reportId) => {
+    const rid = parseInt(reportId)
+    return api
+      .get(`/reports/${rid}/columns`)
+      .then((res) => {
+        const columns = res.data || []
+        // Filter and update reportItems for this report
+        reportItems.value = reportItems.value.filter((item) => item.report_id !== rid)
+        const mapped = columns.map((c) => ({
+          id: c.id,
+          report_id: rid,
+          title: c.name,
+          name: c.name,
+          description: c.description,
+          status: c.status,
+          sql_query: c.query,
+          query: c.query,
+          connection: c.connection_id,
+          connection_id: c.connection_id,
+        }))
+        reportItems.value.push(...mapped)
+        return columns
+      })
+      .catch((err) => {
+        console.error(`Fetch columns for report ${rid} error`, err)
+        throw err
+      })
+  }
+
+  const fetchColumnById = (reportId, columnId) => {
+    const rid = parseInt(reportId)
+    return api
+      .get(`/reports/${rid}/columns/${columnId}`)
+      .then((res) => {
+        const c = res.data
+        return {
+          id: c.id,
+          report_id: rid,
+          title: c.name,
+          name: c.name,
+          description: c.description,
+          status: c.status,
+          sql_query: c.query,
+          query: c.query,
+          connection: c.connection_id,
+          connection_id: c.connection_id,
+        }
+      })
+      .catch((err) => {
+        console.error(`Fetch column ${rid}/${columnId} error`, err)
+        throw err
+      })
+  }
+
+  // ============================================
+  // UPDATE - REPORT COLUMNS
+  // ============================================
+  const updateColumn = (reportId, columnId, updates) => {
+    const rid = parseInt(reportId)
+    const payload = {
+      name: updates.name || updates.title || undefined,
+      description: updates.description,
+      status: updates.status,
+      query: updates.query || updates.sql_query,
+      connection_id: updates.connection_id || updates.connection,
+    }
+    // Remove undefined fields
+    Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key])
+
+    return api
+      .put(`/reports/${rid}/columns/${columnId}`, payload)
+      .then((res) => {
+        const c = res.data
+        const idx = reportItems.value.findIndex((item) => item.id === columnId)
+        if (idx >= 0) {
+          reportItems.value[idx] = {
+            id: c.id,
+            report_id: rid,
+            title: c.name,
+            name: c.name,
+            description: c.description,
+            status: c.status,
+            sql_query: c.query,
+            query: c.query,
+            connection: c.connection_id,
+            connection_id: c.connection_id,
+          }
+        }
+        return c
+      })
+      .catch((err) => {
+        console.error(`Update column ${rid}/${columnId} error`, err)
+        throw err
+      })
+  }
+
+  // ============================================
+  // DELETE - REPORT COLUMNS
+  // ============================================
+  const deleteColumn = (reportId, columnId) => {
+    return api
+      .delete(`/reports/${reportId}/columns/${columnId}`)
+      .then(() => {
+        reportItems.value = reportItems.value.filter((item) => item.id !== columnId)
+        return { message: 'Column deleted successfully' }
+      })
+      .catch((err) => {
+        console.error(`Delete column ${reportId}/${columnId} error`, err)
+        throw err
+      })
+  }
+
+  const deleteItem = (id) => {
+    // Legacy local-only delete (no API call)
     reportItems.value = reportItems.value.filter((item) => item.id !== id)
-
-    if (persist) saveToDisk()
   }
 
   return {
@@ -348,7 +425,6 @@ export const useReportStore = defineStore('reports', () => {
     slugify,
 
     validateReport,
-    saveToDisk,
 
     getItemsforReport,
     getReportById,
@@ -356,8 +432,14 @@ export const useReportStore = defineStore('reports', () => {
 
     addReport,
     addItem,
-
+    fetchAllReports,
+    fetchReportById,
+    updateReport,
     deleteReport,
+    fetchColumnsForReport,
+    fetchColumnById,
+    updateColumn,
+    deleteColumn,
     deleteItem,
   }
 })

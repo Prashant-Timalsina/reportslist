@@ -22,7 +22,7 @@
     </div>
 
     <q-dialog v-model="showAddReportDialog">
-      <q-card style="min-width: 350px">
+      <q-card style="min-width: 400px">
         <q-card-section><div class="text-h6">Create Main Report</div></q-card-section>
         <q-card-section class="q-pt-none">
           <q-input v-model="newReport.title" label="Title" dense autofocus />
@@ -33,10 +33,116 @@
             :options="store.ALLOWED_INTERVALS"
             label="Interval"
           />
+          <q-select v-model="newReport.status" :options="store.ALLOWED_STATUSES" label="Status" />
+          
+          <div class="q-mt-md">
+            <div class="text-subtitle2">Parameters</div>
+            <div class="my-param-style">
+              <q-chip
+                v-for="(value, key) in newReport.parameters"
+                :key="key"
+                removable
+                color="teal-1"
+                text-color="teal-9"
+                size="sm"
+                @remove="removeParamNew(key)"
+              >
+                <strong>{{ key }}:</strong>&nbsp;{{ value }}
+                <q-popup-edit v-model="newReport.parameters[key]" buttons>
+                  <q-input v-model="newReport.parameters[key]" dense autofocus />
+                </q-popup-edit>
+              </q-chip>
+              <q-btn
+                icon="add"
+                round
+                size="xs"
+                color="teal"
+                flat
+                @click="addParamNew"
+              />
+            </div>
+          </div>
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
           <q-btn color="primary" label="Create" @click="submitReport" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="showEditReportDialog">
+      <q-card style="min-width: 400px">
+        <q-card-section><div class="text-h6">Edit Report</div></q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input v-model="editReport.title" label="Title" dense autofocus />
+          <q-input v-model="editReport.description" label="Description" dense type="textarea" />
+          <q-select v-model="editReport.type" :options="store.ALLOWED_TYPES" label="Type" />
+          <q-select
+            v-model="editReport.interval"
+            :options="store.ALLOWED_INTERVALS"
+            label="Interval"
+          />
+          <q-select v-model="editReport.status" :options="store.ALLOWED_STATUSES" label="Status" />
+          
+          <q-list bordered separator class="q-mt-sm">
+
+          <q-item
+            v-for="(value, key) in editReport.parameters"
+            :key="key"
+            clickable
+          >
+            <q-item-section>
+              <q-item-label>
+                <strong>{{ key }}</strong>
+              </q-item-label>
+              <q-item-label caption>
+                {{ value }}
+              </q-item-label>
+
+              <q-popup-edit
+                v-model="editReport.parameters[key]"
+                buttons
+                anchor="bottom left"
+                self="top left"
+                v-slot="scope"
+              >
+                <q-input
+                  v-model="scope.value"
+                  label="Value"
+                  dense
+                  outlined
+                  autofocus
+                />
+              </q-popup-edit>
+            </q-item-section>
+
+            <q-item-section side>
+              <q-btn
+                icon="delete"
+                flat
+                round
+                dense
+                color="negative"
+                @click.stop="removeParamEdit(key)"
+              />
+            </q-item-section>
+          </q-item>
+
+        </q-list>
+
+        <q-btn
+          icon="add"
+          label="Add parameter"
+          flat
+          dense
+          class="q-mt-sm"
+          @click="addParamEdit"
+        />
+
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" @click="cancelEditReport" />
+          <q-btn color="primary" label="Save" @click="submitEditReport" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -46,58 +152,30 @@
       :columns="columns"
       :allowed-types="store.ALLOWED_TYPES"
       :allowed-intervals="store.ALLOWED_INTERVALS"
-      @add-param="addParam"
-      @remove-param="removeParam"
       @delete="confirmDelete"
-      @update-title="handleTitleUpdate"
+      @edit="openEditReport"
     />
-
-    <q-btn
-      :color="isDirty === true ? 'orange' : 'secondary'"
-      icon="save"
-      label="Save Changes"
-      class="q-mt-md"
-      :loading="isSaving"
-      @click="handleSave"
-      :disable="!isDirty"
-    >
-      <template>
-        <q-spinner-facebook />
-      </template>
-    </q-btn>
   </q-page>
 </template>
 
 <script setup>
 import { useQuasar } from 'quasar'
 import { useReportStore } from 'src/stores/reportStore'
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import Papa from 'papaparse'
 import ReportTable from 'src/components/ReportTable.vue'
 
 //
 const $q = useQuasar()
-const isSaving = ref(false)
 const store = useReportStore()
-const isDirty = ref(false)
 
-watch(
-  [() => store.table1],
-  () => {
-    isDirty.value = true
-  },
-  { deep: true },
-)
-
-// Warn user on page unload if there are unsaved changes
-const beforeUnloadHandler = (e) => {
-  if (!isDirty.value) return
-  e.preventDefault()
-  e.returnValue = ''
-}
-
-window.addEventListener('beforeunload', beforeUnloadHandler)
-onUnmounted(() => window.removeEventListener('beforeunload', beforeUnloadHandler))
+onMounted(async () => {
+  try {
+    await store.fetchAllReports()
+  } catch (err) {
+    console.error('Error fetching reports:', err)
+  }
+})
 
 const columns = computed(() => [
   { name: 'actions', label: 'View', align: 'center' },
@@ -112,62 +190,51 @@ const columns = computed(() => [
   },
   { name: 'type', label: 'Type', field: 'type', align: 'center' },
   { name: 'interval', label: 'Interval', field: 'interval', align: 'center' },
+  { name: 'status', label: 'Status', field: 'status', align: 'center' },
   { name: 'slug', label: 'Slug', field: 'slug', align: 'left' },
   { name: 'parameters', label: 'Params', field: 'parameters', align: 'left' },
-  { name: 'delete', label: 'Delete', field: 'delete', align: 'center' },
+  { name: 'actions-col', label: 'Actions', field: 'actions-col', align: 'center' },
 ])
 
-const handleSave = () => {
-  isSaving.value = true
 
-  store.saveToDisk()
-  setTimeout(() => {
-    // Mark as saved
-    isDirty.value = false
-    isSaving.value = false
-
-    $q.notify({
-      type: 'positive',
-      icon: 'cloud_done',
-      message: 'Changes Saved to localStorage',
-      position: 'top',
-      timeout: 2000,
-    })
-  }, 1000)
-}
 
 const showAddReportDialog = ref(false)
 const newReport = ref({
   title: '',
   description: '',
-  type: 'real',
+  type: 'realtime',
   interval: 'daily',
+  status: 'active',
   parameters: {},
 })
 
-const submitReport = () => {
-  // Use the function we created in the store on Day 10
-  store.addReport({
-    ...newReport.value,
-    slug: store.slugify(newReport.value.title),
-  })
+const submitReport = async () => {
+  if (!newReport.value.title || !newReport.value.type || !newReport.value.interval) {
+    $q.notify({ type: 'warning', message: 'Please fill in all required fields' })
+    return
+  }
 
-  // addReport saves immediately, so clear dirty flag
-  isDirty.value = false
+  try {
+    await store.addReport({
+      title: newReport.value.title,
+      description: newReport.value.description,
+      type: newReport.value.type,
+      interval: newReport.value.interval,
+      status: newReport.value.status || 'active',
+      params: newReport.value.parameters || {},
+    })
 
-  // Reset form and close dialog
-  newReport.value = { title: '', description: '', type: 'real', interval: 'daily', parameters: {} }
-  showAddReportDialog.value = false
+    // Reset form and close dialog
+    newReport.value = { title: '', description: '', type: 'realtime', interval: 'daily', status: 'active', parameters: {} }
+    showAddReportDialog.value = false
 
-  $q.notify({ type: 'positive', message: 'New Report Created!' })
+    $q.notify({ type: 'positive', message: 'New Report Created!' })
+  } catch (err) {
+    $q.notify({ type: 'negative', message: 'Error creating report: ' + (err.response?.data?.detail || err.message) })
+  }
 }
 
-const handleTitleUpdate = (id, title) => {
-  store.updateReportTitle(id, title)
-  isDirty.value = true
-}
-
-const addParam = (row) => {
+const addParamNew = () => {
   $q.dialog({
     title: 'New Parameter',
     message: 'Enter the parameter name (Key):',
@@ -179,25 +246,109 @@ const addParam = (row) => {
     persistent: true,
   }).onOk((key) => {
     if (!key) return
-    if (row.parameters[key]) {
+    if (newReport.value.parameters[key]) {
       $q.notify({
         type: 'warning',
         message: 'Key already exists',
       })
       return
     }
-    row.parameters = {
-      ...row.parameters,
-      [key]: 'Change Me',
-    }
+    newReport.value.parameters[key] = 'Change Me'
   })
 }
 
-const removeParam = (row, key) => {
-  const newParams = { ...row.parameters }
+const removeParamNew = (key) => {
+  const newParams = { ...newReport.value.parameters }
   delete newParams[key]
-  row.parameters = newParams
+  newReport.value.parameters = newParams
 }
+
+// Edit dialog for updating reports
+const editingReportId = ref(null)
+const showEditReportDialog = ref(false)
+const editReport = ref({
+  title: '',
+  description: '',
+  type: 'realtime',
+  interval: 'daily',
+  status: 'active',
+  parameters: {},
+})
+
+const openEditReport = (row) => {
+  editingReportId.value = row.id
+  editReport.value = {
+    title: row.title,
+    description: row.description,
+    type: row.type,
+    interval: row.interval,
+    status: row.status || 'active',
+    parameters: { ...row.parameters },
+  }
+  showEditReportDialog.value = true
+}
+
+const submitEditReport = async () => {
+  if (!editReport.value.title || !editReport.value.type || !editReport.value.interval) {
+    $q.notify({ type: 'warning', message: 'Please fill in all required fields' })
+    return
+  }
+
+  try {
+    await store.updateReport(editingReportId.value, {
+      title: editReport.value.title,
+      description: editReport.value.description,
+      type: editReport.value.type,
+      interval: editReport.value.interval,
+      status: editReport.value.status || 'active',
+      params: editReport.value.parameters || {},
+    })
+
+    showEditReportDialog.value = false
+    editingReportId.value = null
+
+    $q.notify({ type: 'positive', message: 'Report Updated!' })
+  } catch (err) {
+    $q.notify({ type: 'negative', message: 'Error updating report: ' + (err.response?.data?.detail || err.message) })
+  }
+}
+
+const cancelEditReport = () => {
+  showEditReportDialog.value = false
+  editingReportId.value = null
+  editReport.value = { title: '', description: '', type: 'realtime', interval: 'daily', status: 'active', parameters: {} }
+}
+
+const addParamEdit = () => {
+  $q.dialog({
+    title: 'New Parameter',
+    message: 'Enter the parameter name (Key):',
+    prompt: {
+      model: '',
+      type: 'text',
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk((key) => {
+    if (!key) return
+    if (editReport.value.parameters[key]) {
+      $q.notify({
+        type: 'warning',
+        message: 'Key already exists',
+      })
+      return
+    }
+    editReport.value.parameters[key] = 'Change Me'
+  })
+}
+
+const removeParamEdit = (key) => {
+  const newParams = { ...editReport.value.parameters }
+  delete newParams[key]
+  editReport.value.parameters = newParams
+}
+
+
 
 // const itemsLength = store.reportItems.filter((item) => item.report_id === store.table1.id).length
 
@@ -208,11 +359,13 @@ const confirmDelete = (row) => {
     cancel: true,
     persistent: true,
     ok: { color: 'negative', label: 'Delete Everything' },
-  }).onOk(() => {
-    // Stage deletion locally and mark unsaved
-    store.deleteReport(row.id, { persist: false })
-    isDirty.value = true
-    $q.notify({ type: 'negative', message: 'Report removed locally — press Save to persist.' })
+  }).onOk(async () => {
+    try {
+      await store.deleteReport(row.id)
+      $q.notify({ type: 'positive', message: 'Report deleted successfully' })
+    } catch (err) {
+      $q.notify({ type: 'negative', message: 'Error deleting report: ' + (err.response?.data?.detail || err.message) })
+    }
   })
 }
 
@@ -228,29 +381,38 @@ const importCSV = (event) => {
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
-    complete: (results) => {
+    complete: async (results) => {
       const data = results.data
 
-      data.forEach((row) => {
-        // We clean the data and send it to our store function from Day 10
-        store.addReport({
-          title: row.title || 'Untitled Report',
-          description: row.description || '',
-          type: row.type || 'real',
-          interval: row.interval || 'daily',
-          parameters: row.parameters ? JSON.parse(row.parameters) : {},
-        })
-      })
+      for (const row of data) {
+        try {
+          await store.addReport({
+            title: row.title || 'Untitled Report',
+            description: row.description || '',
+            type: row.type || 'realtime',
+            interval: row.interval || 'daily',
+            params: row.params ? JSON.parse(row.params) : {},
+          })
+        } catch (err) {
+          console.error('Error importing row:', err)
+        }
+      }
 
       $q.notify({ type: 'positive', message: `Imported ${data.length} reports!` })
-      // addReport saved to disk for each row; ensure UI considers changes saved
-      isDirty.value = false
     },
   })
 }
 </script>
 
 <style lang="scss" scoped>
+.my-param-style {
+  font-family: 'Courier New', Courier, monospace;
+  background: #eceff1;
+  padding: 8px 4px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
 .q-table {
   max-width: 100%;
 

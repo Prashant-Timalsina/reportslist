@@ -69,6 +69,8 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useAuthStore } from 'src/stores/auth'
+import { useRouter } from 'vue-router'
 
 const stateValue = ref('login')
 const loginData = ref({
@@ -78,19 +80,25 @@ const loginData = ref({
 })
 
 const isPassword = ref(true)
+const authStore = useAuthStore()
+const router = useRouter()
 
 const toggleState = () => {
   stateValue.value = stateValue.value === 'login' ? 'register' : 'login'
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   const data = loginData.value
-
-  console.log('Form Submitted:', {
-    action: stateValue.value,
-    user: data.username, // No .value here
-    pass: data.password, // No .value here
-    ...(stateValue.value === 'register' ? { email: data.email } : {}),
-  })
+  try {
+    if (stateValue.value === 'login') {
+      await authStore.login({ email: data.username || data.email, password: data.password })
+      router.push('/')
+    } else {
+      await authStore.signup({ email: data.email, password: data.password, role: 'user' })
+      stateValue.value = 'login'
+    }
+  } catch (err) {
+    console.error('Auth error', err)
+  }
 }
 </script>
