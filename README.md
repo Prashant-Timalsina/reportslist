@@ -53,5 +53,5 @@ See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-
 ```bash
 cd backend
 
-uvicorn main:app --reload
+uvicorn server:app --reload
 ```
