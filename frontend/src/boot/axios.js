@@ -8,13 +8,13 @@ import { useAuthStore } from 'src/stores/auth'
 // good idea to move this instance creation inside of the
 // "export default () => {}" function below (which runs individually
 // for each client)
-const api = axios.create({ 
+const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/',
-  withCredentials: true, 
+  withCredentials: true,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
-  }
+  },
 })
 
 api.interceptors.request.use((config) => {
@@ -29,7 +29,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const originalRequest = error.config
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
@@ -45,14 +45,22 @@ api.interceptors.response.use(
           }
           // fallthrough to logout
           localStorage.removeItem('token')
-          try { window.location.href = '/'; } catch (e) { console.log(e) }
+          try {
+            window.location.href = '/'
+          } catch (e) {
+            console.log(e)
+          }
           return Promise.reject(error)
         })
         .catch((e) => {
           // refresh failed — clear tokens and redirect
           localStorage.removeItem('token')
           localStorage.removeItem('refresh_token')
-          try { window.location.href = '/'; } catch (er) { console.log(er) }
+          try {
+            window.location.href = '/'
+          } catch (er) {
+            console.log(er)
+          }
           return Promise.reject(e)
         })
     }
@@ -60,7 +68,7 @@ api.interceptors.response.use(
       console.error('Network or CORS error:', error.message)
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 export default defineBoot(({ app }) => {
@@ -73,7 +81,6 @@ export default defineBoot(({ app }) => {
 
   app.config.globalProperties.$axios = axios
   app.config.globalProperties.$api = api
-  
 })
 
 export { api }

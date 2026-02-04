@@ -10,7 +10,7 @@
     <!-- DESCRIPTION -->
     <template #body-cell-description="props">
       <q-td :props="props">
-        <div class="ellipsis" style="max-width: 150px">{{ props.row.description }}</div>
+        <div class="ellipsis">{{ props.row.description }}</div>
         <q-tooltip>{{ props.row.description }}</q-tooltip>
       </q-td>
     </template>

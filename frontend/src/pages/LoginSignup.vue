@@ -8,7 +8,6 @@
 
         <q-form @submit.prevent="handleSubmit">
           <q-input
-            
             v-model="loginData.email"
             type="email"
             label="Email"
@@ -17,7 +16,6 @@
             outlined
             class="q-pb-md"
           />
-
 
           <q-input
             v-model="loginData.password"
@@ -84,7 +82,7 @@ const handleSubmit = async () => {
   const data = loginData.value
   try {
     if (stateValue.value === 'login') {
-      await authStore.login({ email: data.username || data.email, password: data.password })
+      await authStore.login({ email: data.email, password: data.password })
       router.push('/')
     } else {
       await authStore.signup({ email: data.email, password: data.password, role: 'user' })

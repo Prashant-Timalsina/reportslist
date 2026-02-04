@@ -230,6 +230,7 @@ export const useReportStore = defineStore('reports', () => {
       .get(`/reports/${reportId}`)
       .then((res) => {
         const r = res.data
+        console.log('ReportData:', r)
         return {
           id: r.id,
           title: r.title,
