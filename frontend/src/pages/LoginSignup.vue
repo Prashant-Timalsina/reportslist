@@ -8,7 +8,7 @@
 
         <q-form @submit.prevent="handleSubmit">
           <q-input
-            v-if="stateValue === 'register'"
+            
             v-model="loginData.email"
             type="email"
             label="Email"
@@ -17,14 +17,7 @@
             outlined
             class="q-pb-md"
           />
-          <q-input
-            v-model="loginData.username"
-            label="Username"
-            placeholder="Enter your username"
-            clearable
-            outlined
-            class="q-pb-md"
-          />
+
 
           <q-input
             v-model="loginData.password"

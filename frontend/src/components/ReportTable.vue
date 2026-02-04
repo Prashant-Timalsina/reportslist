@@ -79,7 +79,6 @@
             :key="key"
             color="teal-1"
             text-color="teal-9"
-            size="sm"
           >
             <strong>{{ key }}:</strong>&nbsp;{{ value }}
           </q-chip>

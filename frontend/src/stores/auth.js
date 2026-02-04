@@ -10,6 +10,35 @@ const useAuthStore = defineStore("auth", {
         _refreshTimeoutId: null,
     }),
     actions:{
+        initializeAuth(){
+            const token = localStorage.getItem('token')
+            if(token){
+                this.token = token
+                this.isAuthenticated = true
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+                // Reschedule token refresh if token exists
+                try {
+                    const parts = token.split('.')
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+                        if (payload && payload.exp) {
+                            const expiresAt = payload.exp * 1000
+                            const refreshAt = expiresAt - 60 * 1000
+                            const delay = Math.max(refreshAt - Date.now(), 5 * 1000)
+                            if (this._refreshTimeoutId) {
+                                clearTimeout(this._refreshTimeoutId)
+                                this._refreshTimeoutId = null
+                            }
+                            this._refreshTimeoutId = setTimeout(() => {
+                                this.refresh().catch((e) => { console.log('Auto refresh failed', e) })
+                            }, delay)
+                        }
+                    }
+                } catch (e) {
+                    console.log('Error scheduling token refresh', e)
+                }
+            }
+        },
         async setToken(token){
             this.token = token;
 
@@ -83,6 +112,7 @@ const useAuthStore = defineStore("auth", {
             localStorage.removeItem('refresh_token')
             this.token = null
             this.isAuthenticated = false
+            delete api.defaults.headers.common['Authorization']
             if (this._refreshTimeoutId) {
                 clearTimeout(this._refreshTimeoutId)
                 this._refreshTimeoutId = null

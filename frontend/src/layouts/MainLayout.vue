@@ -11,9 +11,17 @@
         <q-space />
 
         <q-btn
+          v-if="!authStore.isAuthenticated"
           label="Login"
           :to="{ name: 'login' }"
           color="primary"
+          class="q-my-md q-px-sm q-py-xs q-mx-xl"
+        />
+        <q-btn
+          v-else
+          label="Logout"
+          @click="handleLogout"
+          color="negative"
           class="q-my-md q-px-sm q-py-xs q-mx-xl"
         />
       </q-toolbar>
@@ -24,3 +32,16 @@
     </q-page-container>
   </q-layout>
 </template>
+
+<script setup>
+import { useAuthStore } from 'src/stores/auth'
+import { useRouter } from 'vue-router'
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push({ name: 'login' })
+}
+</script>
