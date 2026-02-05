@@ -1,5 +1,15 @@
 <template>
-  <BaseTable :rows="rows" :columns="columns" row-key="id" class="modern-table">
+  <q-table
+    :rows="rows"
+    :columns="columns"
+    row-key="id"
+    class="modern-table"
+    v-model:pagination="pagination"
+    dense
+    separator="horizontal"
+    flat
+    bordered
+  >
     <template #body-cell-actions="props">
       <q-td :props="props">
         <q-btn
@@ -17,7 +27,7 @@
 
     <template #body-cell-id="props">
       <q-td :props="props" class="shell-part text-weight-medium text-grey-8">
-        #{{ props.value }}
+        #{{ (pagination.page - 1) * pagination.rowsPerPage + props.rowIndex + 1 }}
       </q-td>
     </template>
 
@@ -118,11 +128,11 @@
         </q-btn>
       </q-td>
     </template>
-  </BaseTable>
+  </q-table>
 </template>
 
 <script setup>
-import BaseTable from './BaseTable.vue'
+import { ref } from 'vue'
 
 defineProps({
   rows: { type: Array, required: true },
@@ -132,6 +142,11 @@ defineProps({
 })
 
 defineEmits(['delete', 'edit'])
+
+const pagination = ref({
+  page: 1,
+  rowsPerPage: 10,
+})
 </script>
 
 <style scoped>

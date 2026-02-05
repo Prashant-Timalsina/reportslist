@@ -2,6 +2,95 @@
   <q-page class="q-px-xl q-py-md">
     <q-btn icon="arrow_back" flat color="primary" round to="/" />
 
+    <!-- Report Metadata Header Section -->
+    <div class="q-my-lg">
+      <div class="text-h4 text-bold q-mb-sm">{{ reportDetails.title || 'Report' }}</div>
+      <div class="text-subtitle2 text-grey-7 q-mb-md">
+        Review all associated metadata and data logs below
+      </div>
+
+      <q-list bordered separator class="rounded-borders" style="background: white">
+        <q-item>
+          <q-item-section side>
+            <div class="text-weight-bold text-grey-8">Status</div>
+          </q-item-section>
+          <q-item-section>
+            <q-badge
+              outline
+              :color="reportDetails.status === 'active' ? 'positive' : 'grey-6'"
+              class="text-uppercase text-weight-bolder"
+            >
+              {{ reportDetails.status || 'N/A' }}
+            </q-badge>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section side>
+            <div class="text-weight-bold text-grey-8">Type</div>
+          </q-item-section>
+          <q-item-section>
+            <q-badge
+              rounded
+              :color="reportDetails.type === 'realtime' ? 'positive' : 'warning'"
+              class="q-px-sm"
+            >
+              {{ reportDetails.type || 'N/A' }}
+            </q-badge>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section side>
+            <div class="text-weight-bold text-grey-8">Interval</div>
+          </q-item-section>
+          <q-item-section>
+            <span class="text-body2">{{ reportDetails.interval || 'N/A' }}</span>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section side>
+            <div class="text-weight-bold text-grey-8">Slug</div>
+          </q-item-section>
+          <q-item-section>
+            <q-chip dense size="11px" outline color="blue-grey-4" class="text-weight-medium">
+              {{ reportDetails.slug || 'N/A' }}
+            </q-chip>
+          </q-item-section>
+        </q-item>
+
+        <q-item v-if="reportDetails.description">
+          <q-item-section side>
+            <div class="text-weight-bold text-grey-8">Description</div>
+          </q-item-section>
+          <q-item-section>
+            <span class="text-body2">{{ reportDetails.description }}</span>
+          </q-item-section>
+        </q-item>
+
+        <q-item v-if="hasParameters">
+          <q-item-section side>
+            <div class="text-weight-bold text-grey-8">Parameters</div>
+          </q-item-section>
+          <q-item-section>
+            <div class="parameter-container">
+              <q-chip
+                v-for="(value, key) in reportDetails.parameters"
+                :key="key"
+                size="sm"
+                color="blue-grey-1"
+                text-color="blue-grey-9"
+                class="parameter-chip"
+              >
+                <span class="text-weight-bold">{{ key }}:</span>&nbsp;{{ value }}
+              </q-chip>
+            </div>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </div>
+
     <div class="row items-center q-my-md">
       <q-card class="text-h5 q-px-sm q-py-xs val-part">Linked Reports</q-card>
       <q-space />
@@ -103,6 +192,25 @@ onMounted(async () => {
   } catch (err) {
     console.error('Error fetching columns:', err)
   }
+})
+
+const reportDetails = computed(() => {
+  const report = store.getReportById(route.params.id)
+  return (
+    report || {
+      title: '',
+      description: '',
+      status: '',
+      type: '',
+      interval: '',
+      slug: '',
+      parameters: {},
+    }
+  )
+})
+
+const hasParameters = computed(() => {
+  return reportDetails.value.parameters && Object.keys(reportDetails.value.parameters).length > 0
 })
 
 const rows = computed(() => store.getItemsforReport(route.params.id))
@@ -261,5 +369,18 @@ const removeSubItem = async (row) => {
   top: 0;
   z-index: 2;
   background: #f5f5f5;
+}
+
+/* Parameter display styles */
+.parameter-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.parameter-chip {
+  margin: 0;
+  border-radius: 4px;
 }
 </style>

@@ -209,7 +209,7 @@ onMounted(async () => {
 
 const columns = computed(() => [
   { name: 'actions', label: 'View', align: 'center' },
-  { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+  { name: 'id', label: '#', field: 'id', align: 'left', sortable: true },
   { name: 'title', label: 'Title', field: 'title', align: 'left', sortable: true },
   {
     name: 'description',
@@ -225,7 +225,6 @@ const columns = computed(() => [
   { name: 'parameters', label: 'Params', field: 'parameters', align: 'left' },
   { name: 'actions-col', label: 'Actions', field: 'actions-col', align: 'center' },
 ])
-
 // CREATE LOGIC
 const showAddReportDialog = ref(false)
 const newReport = ref({
