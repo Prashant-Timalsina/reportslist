@@ -22,6 +22,11 @@ from app.controller.report_column_controller import (
     delete_report_column_controller
 )
 
+from app.controller.query_controller import (
+    execute_report_column_query,
+    execute_custom_query
+)
+
 router = APIRouter(tags = ["Reports"])
 
 # CREATE
@@ -76,6 +81,18 @@ def update_report_column(report_id : int, column_id : int, payload : ReportColum
 @router.delete("/reports/{report_id}/columns/{column_id}")
 def delete_report_column(report_id : int, column_id : int, db : Session = Depends(get_db), current_user = Depends(get_current_user)):
     return delete_report_column_controller(db, report_id, column_id, current_user)
+
+# QUERY EXECUTION
+@router.post("/reports/{report_id}/columns/{column_id}/execute")
+def execute_column_query(
+    report_id: int,
+    column_id: int,
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Execute a saved column query and return results"""
+    return execute_report_column_query(db, current_user.id, report_id, column_id, limit)
 
 
 # ADMIN - ONLY ROUTES

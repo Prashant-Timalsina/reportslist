@@ -62,6 +62,7 @@
         :allowed-statuses="store.ALLOWED_STATUSES"
         @delete="removeSubItem"
         @edit="openEditItem"
+        @execute="executeQuery"
       />
     </div>
 
@@ -156,6 +157,65 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- QUERY OUTPUT DIALOG -->
+    <q-dialog v-model="showOutputDialog" maximized>
+      <q-card class="output-card">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">Query Output: {{ executingItem?.title }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="q-pa-md scroll-area">
+          <div v-if="queryOutput.loading" class="flex flex-center" style="min-height: 300px">
+            <q-spinner color="primary" size="50px" />
+          </div>
+
+          <div v-else-if="queryOutput.error" class="q-pa-md bg-red-1 rounded-borders">
+            <div class="text-h6 text-red-9">Error</div>
+            <div class="text-body2 text-red-8 font-mono">{{ queryOutput.error }}</div>
+          </div>
+
+          <div v-else-if="queryOutput.success && queryOutput.rows">
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-weight-bold">
+                Results: {{ queryOutput.row_count }} row(s) returned
+              </div>
+            </div>
+
+            <div class="table-wrapper bg-white rounded-borders border-1" style="overflow-x: auto">
+              <table class="output-table">
+                <thead>
+                  <tr>
+                    <th v-for="(col, idx) in queryOutput.columns" :key="idx" class="text-weight-bold">
+                      {{ col }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, rowIdx) in queryOutput.rows" :key="rowIdx">
+                    <td v-for="(cell, colIdx) in row" :key="colIdx" class="cell-content">
+                      {{ cell !== null ? cell : 'NULL' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="q-mt-md text-caption text-grey-6">
+              Executed at: {{ new Date(queryOutput.executedAt).toLocaleString() }}
+            </div>
+          </div>
+
+          <div v-else class="text-center q-pa-lg text-grey-6">
+            No data
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -164,6 +224,7 @@ import { useQuasar } from 'quasar'
 import { useReportStore } from 'src/stores/reportStore'
 import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { api } from 'src/boot/axios'
 import ReportItemsTable from 'src/components/ReportItemsTable.vue'
 
 const route = useRoute()
@@ -287,6 +348,75 @@ const removeSubItem = async (row) => {
     }
   })
 }
+
+// Query execution
+const showOutputDialog = ref(false)
+const executingItem = ref(null)
+const queryOutput = ref({
+  loading: false,
+  success: false,
+  error: null,
+  columns: [],
+  rows: [],
+  row_count: 0,
+  executedAt: null,
+})
+
+const executeQuery = async (row) => {
+  executingItem.value = row
+  showOutputDialog.value = true
+  
+  queryOutput.value = {
+    loading: true,
+    success: false,
+    error: null,
+    columns: [],
+    rows: [],
+    row_count: 0,
+    executedAt: null,
+  }
+
+  try {
+    const response = await api.post(
+      `/reports/${route.params.id}/columns/${row.id}/execute`,
+      {},
+      { params: { limit: 100 } }
+    )
+
+    if (response.data.success) {
+      queryOutput.value = {
+        loading: false,
+        success: true,
+        error: null,
+        columns: response.data.columns || [],
+        rows: response.data.rows || [],
+        row_count: response.data.row_count || 0,
+        executedAt: new Date(),
+      }
+    } else {
+      queryOutput.value = {
+        loading: false,
+        success: false,
+        error: response.data.error || 'Unknown error',
+        columns: [],
+        rows: [],
+        row_count: 0,
+        executedAt: new Date(),
+      }
+    }
+  } catch (err) {
+    console.error('Query execution error:', err)
+    queryOutput.value = {
+      loading: false,
+      success: false,
+      error: err.response?.data?.detail || err.message || 'Failed to execute query',
+      columns: [],
+      rows: [],
+      row_count: 0,
+      executedAt: new Date(),
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -350,7 +480,9 @@ const removeSubItem = async (row) => {
 
 .td-column-limit {
   display: -webkit-box;
+  display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.4;
@@ -367,5 +499,64 @@ const removeSubItem = async (row) => {
 
 .font-mono {
   font-family: monospace;
+}
+
+/* Query Output Styles */
+.output-card {
+  width: 100%;
+  height: 100%;
+}
+
+.scroll-area {
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.output-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.output-table thead {
+  background: #f5f5f5;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.output-table th {
+  padding: 12px 8px;
+  text-align: left;
+  border-bottom: 2px solid #e0e0e0;
+  white-space: nowrap;
+  background: #f5f5f5;
+  color: #333;
+}
+
+.output-table td {
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #555;
+}
+
+.output-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.cell-content {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  word-break: break-word;
+  max-width: 300px;
+  white-space: pre-wrap;
+}
+
+.border-1 {
+  border: 1px solid #e0e0e0;
 }
 </style>

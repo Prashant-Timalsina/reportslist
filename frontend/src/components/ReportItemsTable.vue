@@ -48,10 +48,34 @@
     <!-- DELETE -->
     <template #body-cell-delete="props">
       <q-td :props="props">
-        <q-btn flat round color="primary" icon="edit" @click="$emit('edit', props.row)">
+        <q-btn 
+          flat 
+          round 
+          dense
+          color="teal" 
+          icon="play_arrow" 
+          @click="$emit('execute', props.row)"
+          :loading="executingRows[props.row.id]"
+        >
+          <q-tooltip>Execute Query</q-tooltip>
+        </q-btn>
+        <q-btn 
+          flat 
+          round 
+          color="primary" 
+          icon="edit" 
+          @click="$emit('edit', props.row)"
+        >
           <q-tooltip>Edit Column</q-tooltip>
         </q-btn>
-        <q-btn flat round dense color="red-4" icon="close" @click="$emit('delete', props.row)">
+        <q-btn 
+          flat 
+          round 
+          dense 
+          color="red-4" 
+          icon="close" 
+          @click="$emit('delete', props.row)"
+        >
           <q-tooltip>Delete Column</q-tooltip>
         </q-btn>
       </q-td>
@@ -61,7 +85,7 @@
 
 <script setup>
 import BaseTable from './BaseTable.vue'
-import { defineProps } from 'vue'
+import { defineProps, defineEmits, ref } from 'vue'
 
 defineProps({
   rows: { type: Array, required: true },
@@ -70,7 +94,10 @@ defineProps({
   connections: { type: Array, default: () => [] },
 })
 
-defineEmits(['delete', 'edit'])
+defineEmits(['delete', 'edit', 'execute'])
+
+const executingRows = ref({})
+
 </script>
 
 <style scoped>
