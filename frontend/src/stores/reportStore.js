@@ -231,7 +231,7 @@ export const useReportStore = defineStore('reports', () => {
       .then((res) => {
         const r = res.data
         console.log('ReportData:', r)
-        return {
+        const formattedReport = {
           id: r.id,
           title: r.title,
           description: r.description,
@@ -241,6 +241,16 @@ export const useReportStore = defineStore('reports', () => {
           status: r.status,
           parameters: r.params || {},
         }
+        // Check if report exists in table1; if so, update it. If not, add it.
+        const idx = table1.value.findIndex((report) => report.id === parseInt(reportId))
+        if (idx >= 0) {
+          table1.value[idx] = formattedReport
+        } else {
+          table1.value.push(formattedReport)
+        }
+        // ------------------------
+
+        return formattedReport
       })
       .catch((err) => {
         console.error(`Fetch report ${reportId} error`, err)
